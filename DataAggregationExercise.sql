@@ -107,3 +107,109 @@ FROM WizzardDeposits
 WHERE DATEPART(YEAR, DepositStartDate) >= 1985
 GROUP BY DepositGroup, IsDepositExpired
 ORDER BY DepositGroup DESC, IsDepositExpired
+
+/*
+    Problem 12. Rich Wizard, Poor Wizard
+*/
+
+SELECT SUM(Difference) 
+FROM(
+SELECT Wizzard1.FirstName AS [Host Wizzard], Wizzard1.DepositAmount AS[Host Wizard Deposit],
+	   Wizzard2.FirstName AS [Guest Wizzard], Wizzard2.DepositAmount AS[Guest Wizard Deposit],
+	   Wizzard1.DepositAmount - Wizzard2.DepositAmount AS Difference
+FROM WizzardDeposits AS Wizzard1
+INNER JOIN WizzardDeposits AS Wizzard2
+ON Wizzard1.Id = Wizzard2.Id-1) AS t
+
+/*
+    Problem 13. Departments Total Salaries
+*/
+
+SELECT DepartmentID, SUM(Salary) AS[TotalSalary]
+FROM Employees
+GROUP BY DepartmentID
+ORDER BY DepartmentID
+
+/*
+    Problem 14. Employees Minimum Salaries
+*/
+
+SELECT DepartmentID, MIN(Salary) AS MinimumSalary
+FROM Employees
+WHERE DATEPART(YEAR, HireDate) >= 2000
+GROUP BY DepartmentID
+HAVING DepartmentID IN (2,5,7)
+
+/*
+    Problem 15. Employees Average Salaries
+*/
+
+SELECT * INTO Average 
+FROM Employees
+WHERE Salary > 30000
+
+DELETE FROM Average WHERE ManagerID = 42
+
+UPDATE Average 
+SET Salary += 5000
+WHERE DepartmentID = 1
+
+SELECT DepartmentID, AVG(Salary) AS[AverageSalary]
+FROM Average
+GROUP BY DepartmentID
+
+/*
+    Problem 16. Employees Maximum Salaries
+*/
+
+SELECT DepartmentID, MAX(Salary) AS [MaxSalary]
+FROM Employees
+GROUP BY DepartmentID
+HAVING MAX(Salary) NOT BETWEEN 30000 AND 70000
+
+/*
+    Problem 17. Employees Count Salaries
+*/
+
+SELECT COUNT(Salary) AS [Count]
+FROM Employees
+WHERE ManagerID IS NULL
+
+
+/*
+    Problem 18. 3rd Highest Salary
+*/
+
+SELECT a.DepartmentId,
+(
+	SELECT DISTINCT b.Salary 
+	FROM Employees AS b
+	WHERE b.DepartmentID = a.DepartmentId
+	ORDER BY Salary DESC
+	OFFSET 2 ROWS
+	FETCH NEXT 1 ROWS ONLY
+) AS [ThirdHighestSalary]
+FROM Employees AS a
+WHERE (
+	SELECT DISTINCT b.Salary 
+	FROM Employees AS b
+	WHERE b.DepartmentID = a.DepartmentId
+	ORDER BY Salary DESC
+	OFFSET 2 ROWS
+	FETCH NEXT 1 ROWS ONLY
+	) IS NOT NULL
+GROUP BY a.DepartmentId
+
+
+/*
+    Problem 19. Salary Challenge
+*/
+
+SELECT TOP(10) FirstName, LastName, DepartmentID  
+FROM Employees AS e
+WHERE Salary >
+		(
+		SELECT AVG(Salary) FROM Employees AS e2
+		WHERE e.DepartmentID = e2.DepartmentID
+		)
+ORDER BY DepartmentID
