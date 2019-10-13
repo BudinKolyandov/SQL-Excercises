@@ -257,3 +257,179 @@ CONCAT('Balance change for account: ',i.AccountId),
 CONCAT('On ',GETDATE(),' your balance was changed from ',i.NewSum,' to ',i.OldSum)
   FROM inserted AS i
 END 
+
+/*
+    Problem 16. Deposit Money
+*/
+						       
+CREATE PROCEDURE usp_DepositMoney (@AccountId INT, @MoneyAmount MONEY)
+AS
+	BEGIN
+	IF (@MoneyAmount < 0)
+		BEGIN 
+		RAISERROR('You can not deposit negative sum', 16, 1);
+	END;
+	ELSE
+		BEGIN 
+		IF(@AccountId IS NULL OR @MoneyAmount IS NULL)
+			BEGIN
+            RAISERROR('Missing value', 16, 1);
+		END;
+	END;
+	BEGIN TRANSACTION;
+	UPDATE Accounts
+		SET Balance +=@MoneyAmount
+		WHERE Id = @AccountId;
+		IF(@@ROWCOUNT < 1)
+			BEGIN
+                 ROLLBACK;
+                 RAISERROR('Account doesn''t exists', 16, 1);
+        END;
+	COMMIT;
+END;
+						  
+/*
+    Problem 17. Withdraw Money Procedure
+*/
+						       
+CREATE PROCEDURE usp_WithdrawMoney (@AccountId INT, @MoneyAmount MONEY)
+AS
+	BEGIN
+	IF (@MoneyAmount < 0)
+		BEGIN 
+		RAISERROR('You can not withdraw negative sum', 16, 1);
+	END;
+	ELSE
+		BEGIN 
+		IF(@AccountId IS NULL OR @MoneyAmount IS NULL)
+			BEGIN
+            RAISERROR('Missing value', 16, 1);
+		END;
+	END;
+	BEGIN TRANSACTION;
+	UPDATE Accounts
+		SET Balance -=@MoneyAmount
+		WHERE Id = @AccountId;
+		IF(@@ROWCOUNT < 1)
+			BEGIN
+                 ROLLBACK;
+                 RAISERROR('Account doesn''t exists', 16, 1);
+        END;
+		IF (0 > (SELECT Balance
+                 FROM Accounts
+                 WHERE Id = @accountId))
+		BEGIN
+			ROLLBACK;
+			RAISERROR('Balance is not enough', 16, 1);
+            END;
+	COMMIT;
+END;
+			 
+/*
+    Problem 18. Money Transfer
+*/
+			 
+CREATE PROCEDURE usp_TransferMoney(@senderId INT, @receiverId INT, @amount MONEY)
+AS
+     BEGIN
+         IF(@amount < 0)
+             BEGIN
+                 RAISERROR('Can''t transfer negative amount', 16, 1);
+         END;
+             ELSE
+             BEGIN
+                 IF(@senderId IS NULL
+                    OR @receiverId IS NULL
+                    OR @amount IS NULL)
+                     BEGIN
+                         RAISERROR('Missing value', 16, 1);
+                 END;
+         END;
+
+         BEGIN TRANSACTION;
+         UPDATE Accounts
+           SET
+               Balance-=@amount
+         WHERE Id = @senderId;
+         IF(@@ROWCOUNT < 1)
+             BEGIN
+                 ROLLBACK;
+                 RAISERROR('Sender''s account doesn''t exists', 16, 1);
+         END;
+
+         IF(0 >
+           (
+               SELECT Balance
+               FROM Accounts
+               WHERE ID = @senderId
+           ))
+             BEGIN
+                 ROLLBACK;
+                 RAISERROR('You need more money for that transaction', 16, 1);
+         END;
+
+         UPDATE Accounts
+           SET
+               Balance+=@amount
+         WHERE ID = @receiverId;
+         IF(@@ROWCOUNT < 1)
+             BEGIN
+                 ROLLBACK;
+                 RAISERROR('Receiver''s account doesn''t exists', 16, 1);
+         END;
+         COMMIT;
+     END;
+		   
+/*
+    Problem 21. Employees with Three Projects
+*/
+		   
+CREATE PROCEDURE usp_AssignProject(@emloyeeId INT, @projectID INT)
+AS
+     BEGIN
+         BEGIN TRANSACTION;
+         INSERT INTO EmployeesProjects(EmployeeID, ProjectID)
+         VALUES (@emloyeeId, @projectID);
+         IF(
+           (
+               SELECT COUNT(EmployeeID)
+               FROM EmployeesProjects
+               WHERE EmployeeID = @emloyeeId
+           ) > 3)
+             BEGIN
+                 ROLLBACK;
+                 RAISERROR('The employee has too many projects!', 16, 1);
+         END;
+         COMMIT;
+     END;
+		   
+/*
+    Problem 22. Delete Employees
+*/		   
+		   
+CREATE TABLE Deleted_Employees
+(
+             EmployeeId   INT IDENTITY PRIMARY KEY,
+             FirstName    NVARCHAR(50),
+             LastName     NVARCHAR(50),
+             MiddleName   NVARCHAR(50),
+             JobTitle     NVARCHAR(50),
+             DepartmentId INT FOREIGN KEY(DepartmentId) REFERENCES Departments(DepartmentId),
+             Salary       DECIMAL(15, 2)             
+);
+GO
+
+CREATE TRIGGER tr_DeletedEmployeesSaver ON Employees
+AFTER DELETE
+AS
+     BEGIN
+         INSERT INTO Deleted_Employees
+                SELECT FirstName,
+                       LastName,
+                       MiddleName,
+                       JobTitle,
+                       DepartmentID,
+                       Salary
+                FROM deleted;
+     END;
+	   
