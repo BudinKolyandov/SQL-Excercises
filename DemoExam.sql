@@ -146,3 +146,22 @@ JOIN Commits AS c ON c.ContributorId = u.Id
 JOIN Files AS f ON f.CommitId = c.Id
 GROUP BY u.Username
 ORDER BY [Size] DESC, u.Username
+
+/*
+    Problem 11. User Total Commits
+*/
+
+CREATE FUNCTION udf_UserTotalCommits(@username VARCHAR(30))
+RETURNS INT
+AS
+BEGIN
+
+DECLARE @userId INT = (SELECT TOP (1)Id 
+					   FROM Users 
+					   WHERE Username = @username);
+DECLARE @result INT = (SELECT COUNT(c.RepositoryId)
+					   FROM Repositories AS r
+					   JOIN Commits AS c ON c.RepositoryId = r.Id
+                       WHERE c.ContributorId = @userId) 
+RETURN @result
+END	
